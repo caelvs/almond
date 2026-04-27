@@ -90,23 +90,31 @@ function App() {
         const isGoodPose = avgAngle > 80 && avgAngle < 170;
         const lineColor = isGoodPose ? "lime" : "red";
 
-        // 왼쪽 무릎 선
-        ctx.beginPath();
-        ctx.moveTo(leftHip.x, leftHip.y);
-        ctx.lineTo(leftKnee.x, leftKnee.y);
-        ctx.lineTo(leftAnkle.x, leftAnkle.y);
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 3;
-        ctx.stroke();
+        // 전체 스켈레톤 연결 정의
+        const connections = [
+          // 얼굴
+          [0, 1], [0, 2], [1, 3], [2, 4],
+          // 상체
+          [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],
+          [5, 11], [6, 12], [11, 12],
+          // 하체
+          [11, 13], [13, 15], [12, 14], [14, 16],
+        ];
 
-        // 오른쪽 무릎 선
-        ctx.beginPath();
-        ctx.moveTo(rightHip.x, rightHip.y);
-        ctx.lineTo(rightKnee.x, rightKnee.y);
-        ctx.lineTo(rightAnkle.x, rightAnkle.y);
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 3;
-        ctx.stroke();
+        connections.forEach(([i, j]) => {
+          const a = kp[i];
+          const b = kp[j];
+          if (a.score > 0.5 && b.score > 0.5) {
+            // 하체 관절이면 자세 피드백 색상 적용
+            const isLeg = [11, 12, 13, 14, 15, 16].includes(i) && [11, 12, 13, 14, 15, 16].includes(j);
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = isLeg ? lineColor : "white";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+        });
       }
 
       animationId = requestAnimationFrame(() => detect(detector));
