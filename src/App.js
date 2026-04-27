@@ -1,23 +1,131 @@
-import logo from './logo.svg';
-import './App.css';
+import { useEffect, useRef, useState } from "react";
+import * as poseDetection from "@tensorflow-models/pose-detection";
+import * as tf from "@tensorflow/tfjs";
+
+// 벡터 각도 계산 함수
+function getAngle(a, b, c) {
+  const ab = { x: a.x - b.x, y: a.y - b.y };
+  const cb = { x: c.x - b.x, y: c.y - b.y };
+  const dot = ab.x * cb.x + ab.y * cb.y;
+  const mag = Math.sqrt(ab.x ** 2 + ab.y ** 2) * Math.sqrt(cb.x ** 2 + cb.y ** 2);
+  return (Math.acos(dot / mag) * 180) / Math.PI;
+}
 
 function App() {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [status, setStatus] = useState("모델 로딩 중...");
+  const [count, setCount] = useState(0);
+  const [phase, setPhase] = useState("standing");
+  const phaseRef = useRef("standing");
+
+  useEffect(() => {
+    let detector;
+    let animationId;
+
+    const setup = async () => {
+      await tf.setBackend("webgl");
+      await tf.ready();
+
+      detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.MoveNet,
+        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
+      );
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoRef.current.srcObject = stream;
+
+      videoRef.current.onloadeddata = () => {
+        setStatus("감지 중...");
+        detect(detector);
+      };
+    };
+
+    const detect = async (detector) => {
+      const poses = await detector.estimatePoses(videoRef.current);
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (poses.length > 0) {
+        const kp = poses[0].keypoints;
+
+        // 왼쪽 무릎 각도 (엉덩이 - 무릎 - 발목)
+        const leftHip = kp[11];
+        const leftKnee = kp[13];
+        const leftAnkle = kp[15];
+
+        // 오른쪽 무릎 각도
+        const rightHip = kp[12];
+        const rightKnee = kp[14];
+        const rightAnkle = kp[16];
+
+        const leftAngle = getAngle(leftHip, leftKnee, leftAnkle);
+        const rightAngle = getAngle(rightHip, rightKnee, rightAnkle);
+        const avgAngle = (leftAngle + rightAngle) / 2;
+
+        // FSM 횟수 카운트
+        if (avgAngle < 100 && phaseRef.current === "standing") {
+          phaseRef.current = "squatting";
+          setPhase("squatting");
+        } else if (avgAngle > 160 && phaseRef.current === "squatting") {
+          phaseRef.current = "standing";
+          setPhase("standing");
+          setCount((prev) => prev + 1);
+        }
+
+        // 관절 그리기
+        kp.forEach((point) => {
+          if (point.score > 0.5) {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = "lime";
+            ctx.fill();
+          }
+        });
+
+        // 무릎 각도에 따라 선 색상 변경
+        const isGoodPose = avgAngle > 80 && avgAngle < 170;
+        const lineColor = isGoodPose ? "lime" : "red";
+
+        // 왼쪽 무릎 선
+        ctx.beginPath();
+        ctx.moveTo(leftHip.x, leftHip.y);
+        ctx.lineTo(leftKnee.x, leftKnee.y);
+        ctx.lineTo(leftAnkle.x, leftAnkle.y);
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // 오른쪽 무릎 선
+        ctx.beginPath();
+        ctx.moveTo(rightHip.x, rightHip.y);
+        ctx.lineTo(rightKnee.x, rightKnee.y);
+        ctx.lineTo(rightAnkle.x, rightAnkle.y);
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      animationId = requestAnimationFrame(() => detect(detector));
+    };
+
+    setup();
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div style={{ textAlign: "center", background: "#111", minHeight: "100vh", color: "white" }}>
+      <h1>ALMOND</h1>
+      <p>{status}</p>
+      <p>phase: {phase}</p>
+      <h2>스쿼트 횟수: {count}</h2>
+      <div style={{ position: "relative", display: "inline-block" }}>
+        <video ref={videoRef} autoPlay playsInline muted />
+        <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0 }} />
+      </div>
     </div>
   );
 }
