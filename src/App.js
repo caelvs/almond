@@ -66,21 +66,34 @@ function App() {
 
         setAngle(Math.round(avgAngle));
 
-        // FSM + 텍스트 피드백
-        if (avgAngle < 100 && phaseRef.current === "standing") {
-          phaseRef.current = "squatting";
+        // 각도 구간별 피드백
+        if (avgAngle > 90) {
+          setFeedback("내려가세요!");
+        } else if (avgAngle >= 60 && avgAngle <= 90) {
+          setFeedback("좋은 자세!");
+        } else if (avgAngle < 60) {
           setFeedback("올라오세요!");
+        }
+
+        // FSM 횟수 카운트
+        if (avgAngle <= 90 && phaseRef.current === "standing") {
+          phaseRef.current = "squatting";
         } else if (avgAngle > 160 && phaseRef.current === "squatting") {
           phaseRef.current = "standing";
           setCount((prev) => prev + 1);
-          setFeedback("좋은 자세!");
-        } else if (phaseRef.current === "standing" && avgAngle <= 160) {
-          setFeedback("내려가세요!");
         }
 
-        const isGoodPose = avgAngle > 80 && avgAngle < 170;
-        const lineColor = isGoodPose ? "lime" : "red";
+        // 각도 구간별 선 색상
+        let lineColor;
+        if (avgAngle > 90) {
+          lineColor = "red";      // 내려가세요
+        } else if (avgAngle >= 60) {
+          lineColor = "lime";     // 좋은 자세
+        } else {
+          lineColor = "yellow";   // 올라오세요
+        }
 
+        // 전체 스켈레톤 연결 정의
         const connections = [
           [0, 1], [0, 2], [1, 3], [2, 4],
           [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],
@@ -151,7 +164,7 @@ function App() {
       <p style={{
         fontSize: "24px",
         fontWeight: "bold",
-        color: feedback === "좋은 자세!" ? "lime" : "orange",
+        color: feedback === "좋은 자세!" ? "lime" : feedback === "올라오세요!" ? "yellow" : "red",
         height: "36px"
       }}>
         {feedback}
@@ -163,7 +176,7 @@ function App() {
         <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0 }} />
       </div>
 
-      {/* 세트 리셋 버튼 */}
+      {/* 다음 세트 버튼 */}
       <div style={{ marginTop: "20px" }}>
         <button
           onClick={handleReset}
