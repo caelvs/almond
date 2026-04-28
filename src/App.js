@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import * as poseDetection from "@tensorflow-models/pose-detection";
 import * as tf from "@tensorflow/tfjs";
 
-// 벡터 각도 계산 함수
 function getAngle(a, b, c) {
   const ab = { x: a.x - b.x, y: a.y - b.y };
   const cb = { x: c.x - b.x, y: c.y - b.y };
@@ -16,7 +15,9 @@ function App() {
   const canvasRef = useRef(null);
   const [status, setStatus] = useState("모델 로딩 중...");
   const [count, setCount] = useState(0);
-  const [phase, setPhase] = useState("standing");
+  const [set, setSet] = useState(1);
+  const [angle, setAngle] = useState(0);
+  const [feedback, setFeedback] = useState("");
   const phaseRef = useRef("standing");
 
   useEffect(() => {
@@ -52,12 +53,9 @@ function App() {
       if (poses.length > 0) {
         const kp = poses[0].keypoints;
 
-        // 왼쪽 무릎 각도 (엉덩이 - 무릎 - 발목)
         const leftHip = kp[11];
         const leftKnee = kp[13];
         const leftAnkle = kp[15];
-
-        // 오른쪽 무릎 각도
         const rightHip = kp[12];
         const rightKnee = kp[14];
         const rightAnkle = kp[16];
@@ -66,38 +64,27 @@ function App() {
         const rightAngle = getAngle(rightHip, rightKnee, rightAnkle);
         const avgAngle = (leftAngle + rightAngle) / 2;
 
-        // FSM 횟수 카운트
+        setAngle(Math.round(avgAngle));
+
+        // FSM + 텍스트 피드백
         if (avgAngle < 100 && phaseRef.current === "standing") {
           phaseRef.current = "squatting";
-          setPhase("squatting");
+          setFeedback("올라오세요!");
         } else if (avgAngle > 160 && phaseRef.current === "squatting") {
           phaseRef.current = "standing";
-          setPhase("standing");
           setCount((prev) => prev + 1);
+          setFeedback("좋은 자세!");
+        } else if (phaseRef.current === "standing" && avgAngle <= 160) {
+          setFeedback("내려가세요!");
         }
 
-        // 관절 그리기
-        kp.forEach((point) => {
-          if (point.score > 0.5) {
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
-            ctx.fillStyle = "lime";
-            ctx.fill();
-          }
-        });
-
-        // 무릎 각도에 따라 선 색상 변경
         const isGoodPose = avgAngle > 80 && avgAngle < 170;
         const lineColor = isGoodPose ? "lime" : "red";
 
-        // 전체 스켈레톤 연결 정의
         const connections = [
-          // 얼굴
           [0, 1], [0, 2], [1, 3], [2, 4],
-          // 상체
           [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],
           [5, 11], [6, 12], [11, 12],
-          // 하체
           [11, 13], [13, 15], [12, 14], [14, 16],
         ];
 
@@ -105,7 +92,6 @@ function App() {
           const a = kp[i];
           const b = kp[j];
           if (a.score > 0.5 && b.score > 0.5) {
-            // 하체 관절이면 자세 피드백 색상 적용
             const isLeg = [11, 12, 13, 14, 15, 16].includes(i) && [11, 12, 13, 14, 15, 16].includes(j);
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -113,6 +99,15 @@ function App() {
             ctx.strokeStyle = isLeg ? lineColor : "white";
             ctx.lineWidth = 3;
             ctx.stroke();
+          }
+        });
+
+        kp.forEach((point) => {
+          if (point.score > 0.5) {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = "lime";
+            ctx.fill();
           }
         });
       }
@@ -124,15 +119,66 @@ function App() {
     return () => cancelAnimationFrame(animationId);
   }, []);
 
+  const handleReset = () => {
+    setCount(0);
+    setSet((prev) => prev + 1);
+    setFeedback("");
+    phaseRef.current = "standing";
+  };
+
   return (
-    <div style={{ textAlign: "center", background: "#111", minHeight: "100vh", color: "white" }}>
+    <div style={{ textAlign: "center", background: "#111", minHeight: "100vh", color: "white", fontFamily: "sans-serif" }}>
       <h1>ALMOND</h1>
       <p>{status}</p>
-      <p>phase: {phase}</p>
-      <h2>스쿼트 횟수: {count}</h2>
+
+      {/* 상태 정보 */}
+      <div style={{ display: "flex", justifyContent: "center", gap: "40px", marginBottom: "10px" }}>
+        <div>
+          <p style={{ color: "#aaa", margin: 0 }}>세트</p>
+          <h2 style={{ margin: 0 }}>{set}</h2>
+        </div>
+        <div>
+          <p style={{ color: "#aaa", margin: 0 }}>횟수</p>
+          <h2 style={{ margin: 0 }}>{count}</h2>
+        </div>
+        <div>
+          <p style={{ color: "#aaa", margin: 0 }}>무릎 각도</p>
+          <h2 style={{ margin: 0 }}>{angle}°</h2>
+        </div>
+      </div>
+
+      {/* 텍스트 피드백 */}
+      <p style={{
+        fontSize: "24px",
+        fontWeight: "bold",
+        color: feedback === "좋은 자세!" ? "lime" : "orange",
+        height: "36px"
+      }}>
+        {feedback}
+      </p>
+
+      {/* 카메라 */}
       <div style={{ position: "relative", display: "inline-block" }}>
         <video ref={videoRef} autoPlay playsInline muted />
         <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0 }} />
+      </div>
+
+      {/* 세트 리셋 버튼 */}
+      <div style={{ marginTop: "20px" }}>
+        <button
+          onClick={handleReset}
+          style={{
+            padding: "12px 40px",
+            fontSize: "18px",
+            background: "#333",
+            color: "white",
+            border: "2px solid #555",
+            borderRadius: "8px",
+            cursor: "pointer"
+          }}
+        >
+          다음 세트
+        </button>
       </div>
     </div>
   );
