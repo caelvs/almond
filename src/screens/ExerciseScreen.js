@@ -43,11 +43,16 @@ function ExerciseScreen({ exercise, onBack }) {
     };
 
     const detect = async (detector) => {
-      const poses = await detector.estimatePoses(videoRef.current);
+      const video = videoRef.current;
+      if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+        animationId = requestAnimationFrame(() => detect(detector));
+        return;
+      }
+      const poses = await detector.estimatePoses(video);
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (poses.length > 0) {
