@@ -24,7 +24,21 @@ export const EXERCISES = [
     gradientTo: "#7c3aed",
     initialPhase: "up",
     feedbackKeypoints: [11, 12, 13, 14, 15, 16],
+    guidePoints: [
+      "발을 어깨 너비로 벌리세요",
+      "무릎이 발끝을 넘지 않도록 주의하세요",
+      "허리를 곧게 펴고 가슴을 들어올리세요",
+      "엉덩이를 의자에 앉듯이 천천히 내리세요",
+    ],
     getPhaseLabel: (p) => (p === "up" ? "준비" : "운동 중"),
+    getDetailedFeedback: (angle, phase) => {
+      if (phase === "up") {
+        if (angle < 160) return "무릎을 완전히 펴세요";
+        return "내려가세요!";
+      }
+      if (angle > 130) return "더 깊이 내려가세요";
+      return "올라가세요!";
+    },
     getDisplayAngle: (kp) => {
       const l = getAngle(kp[11], kp[13], kp[15]);
       const r = getAngle(kp[12], kp[14], kp[16]);
@@ -41,32 +55,6 @@ export const EXERCISES = [
     },
   },
   {
-    id: "lunge",
-    name: "런지",
-    emoji: "🦵",
-    description: "한 발씩 앞으로 내딛어 하체를 강화하는 운동",
-    muscles: "허벅지 · 힙 플렉서 · 코어",
-    gradientFrom: "#059669",
-    gradientTo: "#0891b2",
-    initialPhase: "up",
-    feedbackKeypoints: [11, 12, 13, 14, 15, 16],
-    getPhaseLabel: (p) => (p === "up" ? "준비" : "운동 중"),
-    getDisplayAngle: (kp) => {
-      const l = getAngle(kp[11], kp[13], kp[15]);
-      const r = getAngle(kp[12], kp[14], kp[16]);
-      return Math.round(Math.min(l, r));
-    },
-    isGoodPose: (angle) => angle > 80 && angle < 165,
-    detect: (kp, phase) => {
-      const l = getAngle(kp[11], kp[13], kp[15]);
-      const r = getAngle(kp[12], kp[14], kp[16]);
-      const min = Math.min(l, r);
-      if (min < 100 && phase === "up") return { newPhase: "down", counted: false };
-      if (min > 155 && phase === "down") return { newPhase: "up", counted: true };
-      return { newPhase: phase, counted: false };
-    },
-  },
-  {
     id: "lateral-raise",
     name: "레터럴 레이즈",
     emoji: "🙆",
@@ -76,9 +64,19 @@ export const EXERCISES = [
     gradientTo: "#dc2626",
     initialPhase: "down",
     feedbackKeypoints: [5, 6, 7, 8, 9, 10],
+    guidePoints: [
+      "양발을 어깨 너비로 벌리고 서세요",
+      "팔꿈치를 약간 구부린 상태를 유지하세요",
+      "팔을 어깨 높이까지만 올리세요",
+      "천천히 조절하며 내리세요",
+    ],
     getPhaseLabel: (p) => (p === "down" ? "준비" : "운동 중"),
+    getDetailedFeedback: (angle, phase) => {
+      if (phase === "down") return "팔을 올려보세요!";
+      if (angle > 100) return "너무 높이 올렸어요";
+      return "내려가세요!";
+    },
     getDisplayAngle: (kp) => {
-      // wrist - shoulder - hip angle measures how high arms are raised
       const l = getAngle(kp[9], kp[5], kp[11]);
       const r = getAngle(kp[10], kp[6], kp[12]);
       return Math.round((l + r) / 2);
@@ -90,33 +88,6 @@ export const EXERCISES = [
       const avg = (l + r) / 2;
       if (avg > 70 && phase === "down") return { newPhase: "up", counted: false };
       if (avg < 30 && phase === "up") return { newPhase: "down", counted: true };
-      return { newPhase: phase, counted: false };
-    },
-  },
-  {
-    id: "bicep-curl",
-    name: "바이셉 컬",
-    emoji: "💪",
-    description: "팔꿈치를 굽혀 이두근을 강화하는 운동",
-    muscles: "이두근 · 전완근",
-    gradientFrom: "#db2777",
-    gradientTo: "#9333ea",
-    initialPhase: "down",
-    feedbackKeypoints: [5, 6, 7, 8, 9, 10],
-    getPhaseLabel: (p) => (p === "down" ? "준비" : "운동 중"),
-    getDisplayAngle: (kp) => {
-      // shoulder - elbow - wrist angle
-      const l = getAngle(kp[5], kp[7], kp[9]);
-      const r = getAngle(kp[6], kp[8], kp[10]);
-      return Math.round((l + r) / 2);
-    },
-    isGoodPose: (angle) => angle > 40 && angle < 170,
-    detect: (kp, phase) => {
-      const l = getAngle(kp[5], kp[7], kp[9]);
-      const r = getAngle(kp[6], kp[8], kp[10]);
-      const avg = (l + r) / 2;
-      if (avg < 60 && phase === "down") return { newPhase: "up", counted: false };
-      if (avg > 150 && phase === "up") return { newPhase: "down", counted: true };
       return { newPhase: phase, counted: false };
     },
   },

@@ -169,3 +169,232 @@
   color: #a78bfa;
   font-size: 1.4rem;
 }
+
+/* ── Feedback overlay ── */
+.feedback-overlay {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #facc15;
+  font-size: 1.6rem;
+  font-weight: 800;
+  padding: 8px 24px;
+  border-radius: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── No Detection Banner ── */
+.no-detect-banner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(239, 68, 68, 0.85);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ── Guide Overlay ── */
+.guide-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.guide-card {
+  background: #1a1a1a;
+  border-radius: 20px;
+  padding: 32px 28px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid #2a2a2a;
+}
+
+.guide-emoji {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.guide-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: white;
+  margin: 0 0 6px;
+}
+
+.guide-muscles {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 0 24px;
+}
+
+.guide-points {
+  text-align: left;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guide-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #d1d5db;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.guide-points li::before {
+  content: "✓";
+  color: #4ade80;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.guide-start-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.guide-start-btn:hover {
+  opacity: 0.9;
+}
+
+/* ── Result Overlay ── */
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.result-card {
+  background: #1a1a1a;
+  border-radius: 20px;
+  padding: 40px 32px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid #2a2a2a;
+}
+
+.result-emoji {
+  font-size: 3.5rem;
+  margin-bottom: 12px;
+}
+
+.result-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: white;
+  margin: 0 0 28px;
+}
+
+.result-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 32px;
+}
+
+.result-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.result-stat-label {
+  font-size: 0.7rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.result-stat-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #a78bfa;
+}
+
+.result-btns {
+  display: flex;
+  gap: 12px;
+}
+
+.result-btn {
+  flex: 1;
+  padding: 13px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+
+.result-btn:hover {
+  opacity: 0.85;
+}
+
+.result-btn--secondary {
+  background: #2a2a2a;
+  color: #aaa;
+  border: 1px solid #383838;
+}
+
+.result-btn--primary {
+  background: #a78bfa;
+  color: white;
+}
+
+/* ── Finish Bar ── */
+.finish-bar {
+  background: #161616;
+  padding: 12px 24px;
+  border-top: 1px solid #252525;
+}
+
+.finish-btn {
+  width: 100%;
+  padding: 12px;
+  background: #1f1f1f;
+  color: #a78bfa;
+  border: 1px solid #3b2f6a;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.finish-btn:hover {
+  background: #2a2a2a;
+}
