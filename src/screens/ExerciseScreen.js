@@ -88,8 +88,7 @@ function ExerciseScreen({ exercise, onBack }) {
       totalFramesRef.current += 1;
       if (isGood) goodFramesRef.current += 1;
 
-      const inMovement = phaseRef.current !== ex.initialPhase;
-      const feedbackColor = inMovement ? "yellow" : (isGood ? "lime" : "red");
+      const feedbackColor = isGood ? "lime" : "yellow";
       setFeedbackText(ex.getDetailedFeedback(displayAngle, phaseRef.current));
 
       kp.forEach((p) => {

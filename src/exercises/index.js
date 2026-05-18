@@ -73,8 +73,8 @@ export const EXERCISES = [
     getPhaseLabel: (p) => (p === "down" ? "준비" : "운동 중"),
     getDetailedFeedback: (angle, phase) => {
       if (phase === "down") return "팔을 올려보세요!";
-      if (angle > 100) return "너무 높이 올렸어요";
-      return "내려가세요!";
+      if (angle > 110) return "내려가세요!";
+      return "";
     },
     getDisplayAngle: (kp) => {
       const l = getAngle(kp[9], kp[5], kp[11]);
