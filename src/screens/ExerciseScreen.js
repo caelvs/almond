@@ -3,6 +3,37 @@ import * as poseDetection from "@tensorflow-models/pose-detection";
 import * as tf from "@tensorflow/tfjs";
 import "./ExerciseScreen.css";
 
+const SIGNAL_LABELS = {
+  depth_insufficient: "깊이 부족",
+  depth_incomplete_top: "완전히 펴기 부족",
+  knee_valgus: "무릎 안쪽 모임",
+  back_tilt: "허리 기울어짐",
+  knee_asymmetry: "좌우 무릎 비대칭",
+  hip_misalign: "엉덩이 정렬",
+  elbow_flare: "팔꿈치 벌어짐",
+  elbow_asymmetry: "좌우 팔꿈치 비대칭",
+};
+
+const ERROR_MESSAGES = {
+  camera_denied: "카메라 권한이 거부되었습니다.\n브라우저 주소창의 자물쇠 아이콘을 클릭해\n카메라 접근을 허용해주세요.",
+  camera_error: "카메라를 시작할 수 없습니다.\n카메라가 연결되어 있는지 확인 후\n페이지를 새로고침해주세요.",
+  load_error: "AI 모델 로딩에 실패했습니다.\n인터넷 연결을 확인 후\n페이지를 새로고침해주세요.",
+};
+
+function pickLargest(poses) {
+  let best = null;
+  let bestArea = 0;
+  for (const pose of poses) {
+    const visible = pose.keypoints.filter((p) => p.score > 0.3);
+    if (visible.length === 0) continue;
+    const xs = visible.map((p) => p.x);
+    const ys = visible.map((p) => p.y);
+    const area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+    if (area > bestArea) { bestArea = area; best = pose; }
+  }
+  return best;
+}
+
 const CONNECTIONS = [
   [0, 1], [0, 2], [1, 3], [2, 4],
   [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],
@@ -17,6 +48,9 @@ function ExerciseScreen({ exercise, onBack }) {
   const exerciseRef = useRef(exercise);
   const goodFramesRef = useRef(0);
   const totalFramesRef = useRef(0);
+  const signalCountRef = useRef({});
+  const asymmetryTotalRef = useRef(0);
+  const asymmetryCountRef = useRef(0);
 
   const [showGuide, setShowGuide] = useState(true);
   const [showResult, setShowResult] = useState(false);
@@ -24,7 +58,7 @@ function ExerciseScreen({ exercise, onBack }) {
   const [count, setCount] = useState(0);
   const [phase, setPhase] = useState(exercise.initialPhase);
   const [angle, setAngle] = useState(null);
-  const [feedbackText, setFeedbackText] = useState("");
+  const [signals, setSignals] = useState([]);
   const [detected, setDetected] = useState(true);
 
   useEffect(() => {
@@ -33,25 +67,38 @@ function ExerciseScreen({ exercise, onBack }) {
     let animationId;
 
     const setup = async () => {
-      await tf.setBackend("webgl");
-      await tf.ready();
+      try {
+        setStatus("모델 로딩 중...");
+        await tf.setBackend("webgl");
+        await tf.ready();
+        const detector = await poseDetection.createDetector(
+          poseDetection.SupportedModels.MoveNet,
+          { modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING }
+        );
 
-      const detector = await poseDetection.createDetector(
-        poseDetection.SupportedModels.MoveNet,
-        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
-      );
+        setStatus("카메라 준비 중...");
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (e) {
+          const denied = e.name === "NotAllowedError" || e.name === "PermissionDeniedError";
+          setStatus(denied ? "camera_denied" : "camera_error");
+          return;
+        }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (!videoRef.current) return;
-      videoRef.current.srcObject = stream;
-
-      videoRef.current.onloadeddata = () => {
-        setStatus("감지 중...");
-        detect(detector);
-      };
+        if (!videoRef.current) return;
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadeddata = () => {
+          setStatus("감지 중...");
+          detect(detector);
+        };
+      } catch (e) {
+        setStatus("load_error");
+      }
     };
 
     const detect = async (detector) => {
+      try {
       const video = videoRef.current;
       if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
         animationId = requestAnimationFrame(() => detect(detector));
@@ -64,14 +111,15 @@ function ExerciseScreen({ exercise, onBack }) {
       canvas.height = video.videoHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (poses.length === 0) {
+      const target = pickLargest(poses);
+      if (!target) {
         setDetected(false);
         animationId = requestAnimationFrame(() => detect(detector));
         return;
       }
 
       setDetected(true);
-      const kp = poses[0].keypoints;
+      const kp = target.keypoints;
       const ex = exerciseRef.current;
 
       const { newPhase, counted } = ex.detect(kp, phaseRef.current);
@@ -84,18 +132,39 @@ function ExerciseScreen({ exercise, onBack }) {
       const displayAngle = ex.getDisplayAngle(kp);
       setAngle(isNaN(displayAngle) ? null : displayAngle);
 
-      const isGood = ex.isGoodPose(displayAngle);
+      const { signals: newSignals } = ex.evaluate(kp, phaseRef.current);
+      console.log("signals", newSignals);
+      const hasError = newSignals.some((s) => s.severity === "error");
       totalFramesRef.current += 1;
-      if (isGood) goodFramesRef.current += 1;
+      if (!hasError) goodFramesRef.current += 1;
 
-      const feedbackColor = isGood ? "lime" : "yellow";
-      setFeedbackText(ex.getDetailedFeedback(displayAngle, phaseRef.current));
+      setSignals(newSignals);
+      for (const sig of newSignals) {
+        if (sig.severity === "error" || sig.severity === "warning") {
+          signalCountRef.current[sig.id] = (signalCountRef.current[sig.id] ?? 0) + 1;
+        }
+        if (sig.value != null && (sig.id === "knee_asymmetry" || sig.id === "elbow_asymmetry")) {
+          asymmetryTotalRef.current += sig.value;
+          asymmetryCountRef.current += 1;
+        }
+      }
 
-      kp.forEach((p) => {
+      // error=red, warning=yellow; error takes priority over warning
+      const kpColorMap = {};
+      for (const sig of newSignals) {
+        if (sig.severity === "error" || sig.severity === "warning") {
+          const color = sig.severity === "error" ? "#ef4444" : "#facc15";
+          for (const idx of sig.affectedKeypoints) {
+            if (!kpColorMap[idx] || sig.severity === "error") kpColorMap[idx] = color;
+          }
+        }
+      }
+
+      kp.forEach((p, i) => {
         if (p.score > 0.5) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
-          ctx.fillStyle = "lime";
+          ctx.fillStyle = kpColorMap[i] ?? "lime";
           ctx.fill();
         }
       });
@@ -104,19 +173,25 @@ function ExerciseScreen({ exercise, onBack }) {
         const a = kp[i];
         const b = kp[j];
         if (a.score > 0.5 && b.score > 0.5) {
-          const isFeedback =
-            ex.feedbackKeypoints.includes(i) &&
-            ex.feedbackKeypoints.includes(j);
+          const ci = kpColorMap[i];
+          const cj = kpColorMap[j];
+          const strokeStyle =
+            ci && cj
+              ? ci === "#ef4444" || cj === "#ef4444" ? "#ef4444" : "#facc15"
+              : "rgba(255,255,255,0.6)";
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = isFeedback ? feedbackColor : "rgba(255,255,255,0.6)";
+          ctx.strokeStyle = strokeStyle;
           ctx.lineWidth = 3;
           ctx.stroke();
         }
       });
 
       animationId = requestAnimationFrame(() => detect(detector));
+      } catch (e) {
+        animationId = requestAnimationFrame(() => detect(detector));
+      }
     };
 
     setup();
@@ -135,10 +210,13 @@ function ExerciseScreen({ exercise, onBack }) {
     phaseRef.current = exercise.initialPhase;
     goodFramesRef.current = 0;
     totalFramesRef.current = 0;
+    signalCountRef.current = {};
+    asymmetryTotalRef.current = 0;
+    asymmetryCountRef.current = 0;
     setCount(0);
     setPhase(exercise.initialPhase);
     setAngle(null);
-    setFeedbackText("");
+    setSignals([]);
     setDetected(true);
     setShowResult(false);
     setShowGuide(true);
@@ -148,6 +226,15 @@ function ExerciseScreen({ exercise, onBack }) {
     totalFramesRef.current > 0
       ? Math.round((goodFramesRef.current / totalFramesRef.current) * 100)
       : 0;
+
+  const top3 = Object.entries(signalCountRef.current)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([id, count]) => ({ label: SIGNAL_LABELS[id] ?? id, count }));
+
+  const avgAsymmetry = asymmetryCountRef.current > 0
+    ? Math.round(asymmetryTotalRef.current / asymmetryCountRef.current)
+    : null;
 
   const phaseLabel = exercise.getPhaseLabel(phase);
 
@@ -193,7 +280,25 @@ function ExerciseScreen({ exercise, onBack }) {
                 <span className="result-stat-label">자세 정확도</span>
                 <span className="result-stat-value">{quality}%</span>
               </div>
+              {avgAsymmetry !== null && (
+                <div className="result-stat">
+                  <span className="result-stat-label">비대칭 평균</span>
+                  <span className="result-stat-value result-stat-value--asym">{avgAsymmetry}°</span>
+                </div>
+              )}
             </div>
+            {top3.length > 0 && (
+              <div className="result-top3">
+                <p className="result-top3-title">오류 빈도 TOP {top3.length}</p>
+                {top3.map(({ label, count: c }, i) => (
+                  <div key={i} className="result-top3-item">
+                    <span className="result-top3-rank">{i + 1}</span>
+                    <span className="result-top3-label">{label}</span>
+                    <span className="result-top3-count">{c}회</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="result-btns">
               <button className="result-btn result-btn--secondary" onClick={handleRestart}>
                 다시하기
@@ -229,21 +334,35 @@ function ExerciseScreen({ exercise, onBack }) {
           <canvas ref={canvasRef} />
         </div>
         {status !== "감지 중..." && (
-          <div className="loading-overlay">
-            <div className="loading-spinner" />
-            <p>{status}</p>
+          <div className={`loading-overlay${status in ERROR_MESSAGES ? " loading-overlay--error" : ""}`}>
+            {status in ERROR_MESSAGES ? (
+              <>
+                <p className="loading-error-icon">⚠️</p>
+                <p className="loading-error-msg">{ERROR_MESSAGES[status]}</p>
+                <button className="loading-back-btn" onClick={onBack}>홈으로 돌아가기</button>
+              </>
+            ) : (
+              <>
+                <div className="loading-spinner" />
+                <p>{status}</p>
+              </>
+            )}
           </div>
         )}
-        {/* B: 미감지 경고 */}
+        {/* B: 미감지 경고 / LOCKED 배지 */}
         {status === "감지 중..." && !detected && (
           <div className="no-detect-banner">
             전신이 카메라에 보이도록 위치를 조정하세요
           </div>
         )}
-        {/* A: 상세 피드백 텍스트 */}
-        {status === "감지 중..." && detected && feedbackText && (
-          <div className="feedback-overlay">{feedbackText}</div>
+        {status === "감지 중..." && detected && (
+          <div className="locked-badge">LOCKED</div>
         )}
+        {/* A: 상세 피드백 텍스트 */}
+        {status === "감지 중..." && detected && signals.length > 0 && (() => {
+          const top = signals.find((s) => s.severity === "error") ?? signals.find((s) => s.severity === "warning") ?? signals[0];
+          return <div className="feedback-overlay">{top.message}</div>;
+        })()}
       </div>
 
       <div className="ex-footer">
