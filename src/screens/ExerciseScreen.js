@@ -218,6 +218,9 @@ function ExerciseScreen({ exercise, onBack }) {
                 <li key={i}>{point}</li>
               ))}
             </ul>
+            <div className="guide-camera-notice">
+              📷 카메라를 정면에 두고 전신이 보이도록 해주세요
+            </div>
             <button
               className="guide-start-btn"
               style={{
