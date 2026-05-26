@@ -3,16 +3,6 @@ import * as poseDetection from "@tensorflow-models/pose-detection";
 import * as tf from "@tensorflow/tfjs";
 import "./ExerciseScreen.css";
 
-const SIGNAL_LABELS = {
-  depth_insufficient: "깊이 부족",
-  depth_incomplete_top: "완전히 펴기 부족",
-  knee_valgus: "무릎 안쪽 모임",
-  back_tilt: "허리 기울어짐",
-  knee_asymmetry: "좌우 무릎 비대칭",
-  hip_misalign: "엉덩이 정렬",
-  elbow_flare: "팔꿈치 벌어짐",
-  elbow_asymmetry: "좌우 팔꿈치 비대칭",
-};
 
 const ERROR_MESSAGES = {
   camera_denied: "카메라 권한이 거부되었습니다.\n브라우저 주소창의 자물쇠 아이콘을 클릭해\n카메라 접근을 허용해주세요.",
@@ -35,7 +25,6 @@ function ExerciseScreen({ exercise, onBack }) {
   const exerciseRef = useRef(exercise);
   const goodFramesRef = useRef(0);
   const totalFramesRef = useRef(0);
-  const signalCountRef = useRef({});
   const asymmetryTotalRef = useRef(0);
   const asymmetryCountRef = useRef(0);
 
@@ -126,9 +115,6 @@ function ExerciseScreen({ exercise, onBack }) {
 
       setSignals(newSignals);
       for (const sig of newSignals) {
-        if (sig.severity === "error" || sig.severity === "warning") {
-          signalCountRef.current[sig.id] = (signalCountRef.current[sig.id] ?? 0) + 1;
-        }
         if (sig.value != null && (sig.id === "knee_asymmetry" || sig.id === "elbow_asymmetry")) {
           asymmetryTotalRef.current += sig.value;
           asymmetryCountRef.current += 1;
@@ -196,7 +182,6 @@ function ExerciseScreen({ exercise, onBack }) {
     phaseRef.current = exercise.initialPhase;
     goodFramesRef.current = 0;
     totalFramesRef.current = 0;
-    signalCountRef.current = {};
     asymmetryTotalRef.current = 0;
     asymmetryCountRef.current = 0;
     setCount(0);
@@ -212,11 +197,6 @@ function ExerciseScreen({ exercise, onBack }) {
     totalFramesRef.current > 0
       ? Math.round((goodFramesRef.current / totalFramesRef.current) * 100)
       : 0;
-
-  const top3 = Object.entries(signalCountRef.current)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([id, count]) => ({ label: SIGNAL_LABELS[id] ?? id, count }));
 
   const avgAsymmetry = asymmetryCountRef.current > 0
     ? Math.round(asymmetryTotalRef.current / asymmetryCountRef.current)
@@ -273,18 +253,6 @@ function ExerciseScreen({ exercise, onBack }) {
                 </div>
               )}
             </div>
-            {top3.length > 0 && (
-              <div className="result-top3">
-                <p className="result-top3-title">오류 빈도 TOP {top3.length}</p>
-                {top3.map(({ label, count: c }, i) => (
-                  <div key={i} className="result-top3-item">
-                    <span className="result-top3-rank">{i + 1}</span>
-                    <span className="result-top3-label">{label}</span>
-                    <span className="result-top3-count">{c}회</span>
-                  </div>
-                ))}
-              </div>
-            )}
             <div className="result-btns">
               <button className="result-btn result-btn--secondary" onClick={handleRestart}>
                 다시하기
