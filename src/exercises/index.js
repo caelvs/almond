@@ -47,11 +47,7 @@ export const EXERCISES = [
 
       // 1. 깊이
       if (phase === "up") {
-        if (kneeAngle < 160) {
-          signals.push({ id: "depth_incomplete_top", severity: "error", affectedKeypoints: [11, 12, 13, 14, 15, 16], message: "무릎을 완전히 펴세요" });
-        } else {
-          signals.push({ id: "cue_descend", severity: "info", affectedKeypoints: [], message: "내려가세요!" });
-        }
+        signals.push({ id: "cue_descend", severity: "info", affectedKeypoints: [], message: "내려가세요!" });
       } else {
         if (kneeAngle > 130) {
           signals.push({ id: "depth_insufficient", severity: "error", affectedKeypoints: [11, 12, 13, 14, 15, 16], message: "더 깊이 내려가세요" });
@@ -121,11 +117,7 @@ export const EXERCISES = [
       const elbowAngle = (lElbow + rElbow) / 2;
 
       if (phase === "up") {
-        if (elbowAngle < 150) {
-          signals.push({ id: "depth_incomplete_top", severity: "error", affectedKeypoints: [5, 6, 7, 8, 9, 10], message: "팔을 완전히 펴세요" });
-        } else {
-          signals.push({ id: "cue_descend", severity: "info", affectedKeypoints: [], message: "내려가세요!" });
-        }
+        signals.push({ id: "cue_descend", severity: "info", affectedKeypoints: [], message: "내려가세요!" });
       } else {
         if (elbowAngle > 100) {
           signals.push({ id: "depth_insufficient", severity: "error", affectedKeypoints: [5, 6, 7, 8, 9, 10], message: "더 깊이 내려가세요" });

@@ -20,19 +20,6 @@ const ERROR_MESSAGES = {
   load_error: "AI 모델 로딩에 실패했습니다.\n인터넷 연결을 확인 후\n페이지를 새로고침해주세요.",
 };
 
-function pickLargest(poses) {
-  let best = null;
-  let bestArea = 0;
-  for (const pose of poses) {
-    const visible = pose.keypoints.filter((p) => p.score > 0.3);
-    if (visible.length === 0) continue;
-    const xs = visible.map((p) => p.x);
-    const ys = visible.map((p) => p.y);
-    const area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
-    if (area > bestArea) { bestArea = area; best = pose; }
-  }
-  return best;
-}
 
 const CONNECTIONS = [
   [0, 1], [0, 2], [1, 3], [2, 4],
@@ -73,7 +60,7 @@ function ExerciseScreen({ exercise, onBack }) {
         await tf.ready();
         const detector = await poseDetection.createDetector(
           poseDetection.SupportedModels.MoveNet,
-          { modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING }
+          { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
         );
 
         setStatus("카메라 준비 중...");
@@ -111,15 +98,14 @@ function ExerciseScreen({ exercise, onBack }) {
       canvas.height = video.videoHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const target = pickLargest(poses);
-      if (!target) {
+      if (poses.length === 0) {
         setDetected(false);
         animationId = requestAnimationFrame(() => detect(detector));
         return;
       }
 
       setDetected(true);
-      const kp = target.keypoints;
+      const kp = poses[0].keypoints;
       const ex = exerciseRef.current;
 
       const { newPhase, counted } = ex.detect(kp, phaseRef.current);
@@ -354,9 +340,6 @@ function ExerciseScreen({ exercise, onBack }) {
           <div className="no-detect-banner">
             전신이 카메라에 보이도록 위치를 조정하세요
           </div>
-        )}
-        {status === "감지 중..." && detected && (
-          <div className="locked-badge">LOCKED</div>
         )}
         {/* A: 상세 피드백 텍스트 */}
         {status === "감지 중..." && detected && signals.length > 0 && (() => {
