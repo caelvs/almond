@@ -408,6 +408,7 @@
   color: #555;
   text-transform: uppercase;
   letter-spacing: 1.5px;
+  white-space: nowrap;
 }
 
 .result-stat-value {
