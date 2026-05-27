@@ -260,6 +260,27 @@
   width: 100%;
   text-align: center;
   border: 1px solid #2a2a2a;
+  position: relative;
+}
+
+.guide-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.guide-close-btn:hover {
+  color: #ccc;
+  background: #2a2a2a;
 }
 
 .guide-emoji {
@@ -349,7 +370,7 @@
 .result-card {
   background: #1a1a1a;
   border-radius: 20px;
-  padding: 40px 32px;
+  padding: 40px 20px;
   max-width: 360px;
   width: 100%;
   text-align: center;
@@ -371,7 +392,7 @@
 .result-stats {
   display: flex;
   justify-content: center;
-  gap: 40px;
+  gap: 24px;
   margin-bottom: 32px;
 }
 
@@ -392,6 +413,7 @@
   font-size: 2rem;
   font-weight: 900;
   color: #a78bfa;
+  white-space: nowrap;
 }
 
 .result-btns {

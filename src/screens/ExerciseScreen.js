@@ -27,6 +27,7 @@ function ExerciseScreen({ exercise, onBack }) {
   const totalFramesRef = useRef(0);
   const asymmetryTotalRef = useRef(0);
   const asymmetryCountRef = useRef(0);
+  const lastFeedbackUpdateRef = useRef(0);
 
   const [showGuide, setShowGuide] = useState(true);
   const [showResult, setShowResult] = useState(false);
@@ -39,6 +40,7 @@ function ExerciseScreen({ exercise, onBack }) {
 
   useEffect(() => {
     if (showGuide) return;
+    if (showResult) return;
 
     let animationId;
 
@@ -105,15 +107,18 @@ function ExerciseScreen({ exercise, onBack }) {
       if (counted) setCount((c) => c + 1);
 
       const displayAngle = ex.getDisplayAngle(kp);
-      setAngle(isNaN(displayAngle) ? null : displayAngle);
-
       const { signals: newSignals } = ex.evaluate(kp, phaseRef.current);
-      console.log("signals", newSignals);
       const hasError = newSignals.some((s) => s.severity === "error");
       totalFramesRef.current += 1;
       if (!hasError) goodFramesRef.current += 1;
 
-      setSignals(newSignals);
+      const now = performance.now();
+      if (now - lastFeedbackUpdateRef.current >= 300) {
+        lastFeedbackUpdateRef.current = now;
+        setAngle(isNaN(displayAngle) ? null : displayAngle);
+        setSignals(newSignals);
+      }
+
       for (const sig of newSignals) {
         if (sig.value != null && (sig.id === "knee_asymmetry" || sig.id === "elbow_asymmetry")) {
           asymmetryTotalRef.current += sig.value;
@@ -174,7 +179,7 @@ function ExerciseScreen({ exercise, onBack }) {
         video.srcObject.getTracks().forEach((t) => t.stop());
       }
     };
-  }, [showGuide]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showGuide, showResult]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFinish = () => setShowResult(true);
 
@@ -210,6 +215,7 @@ function ExerciseScreen({ exercise, onBack }) {
       {showGuide && (
         <div className="guide-overlay">
           <div className="guide-card">
+            <button className="guide-close-btn" onClick={onBack}>✕</button>
             <div className="guide-emoji">{exercise.emoji}</div>
             <h2 className="guide-name">{exercise.name}</h2>
             <p className="guide-muscles">{exercise.muscles}</p>
@@ -286,7 +292,19 @@ function ExerciseScreen({ exercise, onBack }) {
       </div>
 
       <div className="video-area">
-        <div className="video-wrapper">
+        <div
+          className="video-wrapper"
+          style={{
+            border: `3px solid ${
+              status === "감지 중..." && detected
+                ? signals.some((s) => s.severity === "error")
+                  ? "#ef4444"
+                  : "#22c55e"
+                : "transparent"
+            }`,
+            transition: "border-color 0.3s",
+          }}
+        >
           <video ref={videoRef} autoPlay playsInline muted />
           <canvas ref={canvasRef} />
         </div>
