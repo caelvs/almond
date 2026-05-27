@@ -6,7 +6,7 @@ function HomeScreen({ onSelect }) {
     <div className="home">
       <header className="home-header">
         <h1 className="home-logo">ALMOND</h1>
-        <p className="home-subtitle">AI 기반 실시간 운동 자세 분석</p>
+        <p className="home-subtitle">AI 홈트 자세 코치</p>
       </header>
 
       <main className="home-main">

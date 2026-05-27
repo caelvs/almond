@@ -25,8 +25,6 @@ function ExerciseScreen({ exercise, onBack }) {
   const exerciseRef = useRef(exercise);
   const goodFramesRef = useRef(0);
   const totalFramesRef = useRef(0);
-  const asymmetryTotalRef = useRef(0);
-  const asymmetryCountRef = useRef(0);
   const lastFeedbackUpdateRef = useRef(0);
 
   const [showGuide, setShowGuide] = useState(true);
@@ -119,13 +117,6 @@ function ExerciseScreen({ exercise, onBack }) {
         setSignals(newSignals);
       }
 
-      for (const sig of newSignals) {
-        if (sig.value != null && (sig.id === "knee_asymmetry" || sig.id === "elbow_asymmetry")) {
-          asymmetryTotalRef.current += sig.value;
-          asymmetryCountRef.current += 1;
-        }
-      }
-
       // error=red, warning=yellow; error takes priority over warning
       const kpColorMap = {};
       for (const sig of newSignals) {
@@ -187,8 +178,6 @@ function ExerciseScreen({ exercise, onBack }) {
     phaseRef.current = exercise.initialPhase;
     goodFramesRef.current = 0;
     totalFramesRef.current = 0;
-    asymmetryTotalRef.current = 0;
-    asymmetryCountRef.current = 0;
     setCount(0);
     setPhase(exercise.initialPhase);
     setAngle(null);
@@ -202,10 +191,6 @@ function ExerciseScreen({ exercise, onBack }) {
     totalFramesRef.current > 0
       ? Math.round((goodFramesRef.current / totalFramesRef.current) * 100)
       : 0;
-
-  const avgAsymmetry = asymmetryCountRef.current > 0
-    ? Math.round(asymmetryTotalRef.current / asymmetryCountRef.current)
-    : null;
 
   const phaseLabel = exercise.getPhaseLabel(phase);
 
@@ -255,12 +240,6 @@ function ExerciseScreen({ exercise, onBack }) {
                 <span className="result-stat-label">자세 정확도</span>
                 <span className="result-stat-value">{quality}%</span>
               </div>
-              {avgAsymmetry !== null && (
-                <div className="result-stat">
-                  <span className="result-stat-label">비대칭 평균</span>
-                  <span className="result-stat-value result-stat-value--asym">{avgAsymmetry}°</span>
-                </div>
-              )}
             </div>
             <div className="result-btns">
               <button className="result-btn result-btn--secondary" onClick={handleRestart}>
