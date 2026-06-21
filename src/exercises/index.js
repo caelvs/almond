@@ -50,7 +50,7 @@ export const EXERCISES = [
         signals.push({ id: "cue_descend", severity: "info", affectedKeypoints: [], message: "내려가세요!" });
       } else {
         if (kneeAngle > 130) {
-          signals.push({ id: "depth_insufficient", severity: "error", affectedKeypoints: [11, 12, 13, 14, 15, 16], message: "더 깊이 내려가세요" });
+          signals.push({ id: "depth_insufficient", severity: "error", affectedKeypoints: [11, 12, 13, 14, 15, 16], message: "올라가세요" });
         } else {
           signals.push({ id: "cue_ascend", severity: "info", affectedKeypoints: [], message: "올라가세요!" });
         }
@@ -120,7 +120,7 @@ export const EXERCISES = [
         signals.push({ id: "cue_descend", severity: "info", affectedKeypoints: [], message: "내려가세요!" });
       } else {
         if (elbowAngle > 100) {
-          signals.push({ id: "depth_insufficient", severity: "error", affectedKeypoints: [5, 6, 7, 8, 9, 10], message: "더 깊이 내려가세요" });
+          signals.push({ id: "depth_insufficient", severity: "error", affectedKeypoints: [5, 6, 7, 8, 9, 10], message: "올라가세요" });
         } else {
           signals.push({ id: "cue_ascend", severity: "info", affectedKeypoints: [], message: "올라가세요!" });
         }
